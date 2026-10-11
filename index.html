@@ -1,0 +1,238 @@
+from pathlib import Path
+import zipfile, textwrap
+
+base = Path("/mnt/data/strandcare")
+base.mkdir(exist_ok=True)
+
+html = r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f7f1e8">
+<title>Strand — Your Hair Wellness Journal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+:root{--paper:#f7f1e8;--ink:#293b32;--muted:#718076;--green:#dce8d7;--green2:#9eb99a;--peach:#f4d5c4;--yellow:#f5e5a9;--lav:#e4dff1;--white:#fffdf8;--line:#e7dfd3;--shadow:0 12px 32px #394a3510}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+.wrap{max-width:1180px;margin:auto;padding:22px 26px 44px;position:relative;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}
+.brand{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',serif;font-size:26px;font-weight:700;letter-spacing:-.7px}
+.brand-mark{width:40px;height:40px;border-radius:50% 50% 45% 55%;background:var(--green);display:grid;place-items:center;border:1.5px solid var(--ink);transform:rotate(-7deg)}
+.brand-mark svg{transform:rotate(7deg)}
+.top-right{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}
+.date-pill{border:1px solid var(--line);border-radius:99px;padding:8px 13px;background:#fff9}
+.hero{display:grid;grid-template-columns:1.3fr .7fr;gap:20px;margin-bottom:20px}
+.hero-main{background:var(--green);border:1.5px solid var(--ink);border-radius:28px;padding:30px 32px;position:relative;min-height:260px;overflow:hidden}
+.eyebrow{text-transform:uppercase;letter-spacing:2px;font-size:10px;font-weight:700;color:#607b61}
+h1,h2,h3,p{margin-top:0}h1{font:600 clamp(32px,4vw,48px)/1.1 'Playfair Display',serif;letter-spacing:-1.2px;max-width:470px;margin:12px 0 13px}
+.hero p{color:#536b58;max-width:390px;margin-bottom:20px}
+.primary{background:var(--ink);color:white;border:0;border-radius:99px;padding:11px 17px;font-weight:600;display:inline-flex;gap:8px;align-items:center}
+.primary:hover{background:#3c5546;transform:translateY(-1px)}
+.hero-doodle{position:absolute;right:12px;bottom:-3px;width:205px;max-width:38%;height:auto}
+.tip-card{background:var(--white);border:1.5px solid var(--ink);border-radius:28px;padding:24px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;min-height:260px}
+.tip-card h2{font:600 25px/1.12 'Playfair Display',serif;margin:10px 0}
+.tip-card p{color:var(--muted);max-width:260px;margin-bottom:10px}
+.tip-footer{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted)}
+.tip-sun{position:absolute;right:20px;top:20px;width:65px}
+.section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:27px 2px 13px}
+.section-head h2{font:600 25px 'Playfair Display',serif;margin:0}
+.section-head p{color:var(--muted);font-size:12px;margin:0}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}
+.panel{background:var(--white);border:1.5px solid var(--ink);border-radius:24px;padding:22px;box-shadow:var(--shadow)}
+.panel-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.panel-title h3{font:600 21px 'Playfair Display',serif;margin:0}
+.small-tag{font-size:10px;background:var(--yellow);border-radius:99px;padding:6px 10px;font-weight:700}
+.habit-list{display:grid;gap:10px}
+.habit{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid var(--line);border-radius:16px;transition:.2s;background:#fffefa}
+.habit.done{background:#edf3e8;border-color:#b4c9ad}
+.habit-check{width:24px;height:24px;border:1.5px solid #9aaa99;border-radius:8px;display:grid;place-items:center;flex-shrink:0;background:white;color:white}
+.habit.done .habit-check{background:var(--ink);border-color:var(--ink)}
+.habit-copy{flex:1}.habit-copy strong{display:block;font-size:13px}.habit-copy span{font-size:11px;color:var(--muted)}
+.habit-emoji{font-size:20px}
+.progress-wrap{margin-top:17px;padding-top:16px;border-top:1px dashed var(--line)}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px}
+.progress-bar{height:9px;border-radius:99px;background:#eee9df;overflow:hidden}.progress-fill{height:100%;width:0;background:var(--green2);border-radius:99px;transition:width .3s}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{border-radius:18px;padding:17px;background:#f6eee2;min-height:112px;position:relative;overflow:hidden}
+.stat:nth-child(2){background:var(--lav)}.stat:nth-child(3){background:var(--peach)}.stat:nth-child(4){background:#e7ead1}
+.stat .label{font-size:11px;color:#66746a}.stat .num{font:600 29px 'Playfair Display',serif;margin:7px 0 0}.stat .tiny{font-size:10px;color:#66746a}
+.stat svg{position:absolute;right:8px;top:8px;width:32px;opacity:.75}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:grid;gap:6px}.field label{font-size:11px;font-weight:700;color:#607065}
+.field input,.field select,.field textarea{width:100%;background:#fffefa;border:1px solid var(--line);border-radius:12px;padding:10px 11px;color:var(--ink);outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green2);box-shadow:0 0 0 3px #dce8d755}
+.field textarea{resize:vertical;min-height:78px}.full{grid-column:1/-1}
+.save-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px}
+.mini-note{font-size:10px;color:var(--muted);max-width:240px}
+.history{display:grid;gap:10px}.history-item{display:grid;grid-template-columns:74px 1fr auto;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:14px}
+.history-date{font-size:11px;color:var(--muted)}.history-main strong{display:block;font-size:12px}.history-main span{font-size:11px;color:var(--muted)}
+.shed-badge{font-size:11px;padding:5px 8px;border-radius:99px;background:#f4ead6}
+.empty{color:var(--muted);font-size:12px;text-align:center;padding:22px 8px}
+.footer{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-top:28px;color:var(--muted);font-size:11px;padding:0 4px}
+.footer strong{color:var(--ink)}.footer-doodle{width:75px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:99px;z-index:10;transition:.25s;box-shadow:var(--shadow)}.toast.show{transform:translateX(-50%) translateY(0)}
+button:focus-visible{outline:3px solid #9eb99a;outline-offset:3px}
+@media(max-width:760px){.wrap{padding:16px 14px 32px}.topbar{align-items:flex-start}.top-right{flex-direction:column;align-items:flex-end;gap:5px}.hero,.grid{grid-template-columns:1fr}.hero-main{min-height:275px;padding:25px}.hero-doodle{width:150px;max-width:38%}.tip-card{min-height:210px}.section-head{align-items:start;flex-direction:column}.panel{padding:17px}.footer{align-items:flex-start}.footer-doodle{display:none}}
+@media(max-width:400px){.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.hero-doodle{opacity:.65}.history-item{grid-template-columns:58px 1fr}.shed-badge{grid-column:2;justify-self:start}.brand{font-size:23px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar">
+  <div class="brand"><span class="brand-mark"><svg width="25" height="25" viewBox="0 0 32 32" fill="none" stroke="#293b32" stroke-width="1.8" stroke-linecap="round"><path d="M16 26C6 20 8 8 17 5c8 6 8 15-1 21Z"/><path d="M16 25c0-7 0-12 1-18M16 17l-5-5m5 10 5-5"/></svg></span> strand<span style="font:500 11px 'DM Sans';letter-spacing:1px;color:#718076;margin-left:-4px">/ WELLNESS</span></div>
+  <div class="top-right"><span>YOUR GENTLE HAIR JOURNAL</span><span class="date-pill" id="todayDate">Today</span></div>
+</header>
+
+<section class="hero">
+  <div class="hero-main">
+    <div class="eyebrow">A little care, every day ✿</div>
+    <h1>Healthy habits.<br>Happier strands.</h1>
+    <p>A calm little space to notice your routines, track changes, and take care of yourself — one day at a time.</p>
+    <button class="primary" onclick="document.getElementById('routine').scrollIntoView({behavior:'smooth'})">Start today's check-in <span>↗</span></button>
+    <svg class="hero-doodle" viewBox="0 0 220 210" fill="none" aria-label="Doodle of a smiling flower and leaves"><g stroke="#293b32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M123 199c-2-42 8-75 25-105"/><path d="M137 148c-27 4-44-11-43-30 23-3 40 7 43 30Z" fill="#f5e5a9"/><path d="M148 122c24-19 45-10 49 8-20 13-38 10-49-8Z" fill="#9eb99a"/><path d="M148 93c-4-22 12-36 30-32 4 20-8 33-30 32Z" fill="#f4d5c4"/><path d="M105 197h61"/><path d="M78 61c-13-8-17-24-5-32 12 1 18 15 5 32Z" fill="#f5e5a9"/><path d="M85 61c-2-16-1-25-7-31"/><path d="M77 63c-19-4-30 7-27 21 17 5 27-4 27-21Z" fill="#f4d5c4"/><path d="M78 62c-8 7-16 13-24 19"/><path d="M61 118c-18-10-20-27-6-36 17 7 21 22 6 36Z" fill="#9eb99a"/><path d="M61 117c-2-13-4-22-7-30"/><path d="M72 115c18-14 34-7 35 7-15 10-28 7-35-7Z" fill="#e4dff1"/><path d="M72 115 99 123"/><path d="M60 151c-14-9-15-23-3-30 14 6 17 18 3 30Z" fill="#f5e5a9"/><path d="M60 151 58 126"/><path d="M69 153c15-12 28-5 28 7-13 8-24 5-28-7Z" fill="#f4d5c4"/><path d="M69 153 92 160"/><path d="M158 38c-8-12-4-24 8-27 11 10 8 21-8 27Z" fill="#9eb99a"/><path d="M158 38 165 13"/><path d="M163 40c12-12 25-8 27 3-10 9-20 7-27-3Z" fill="#e4dff1"/><path d="M163 40 186 43"/></g><g transform="translate(119 50)"><circle r="26" fill="#f5e5a9" stroke="#293b32" stroke-width="2"/><circle cx="-8" cy="-2" r="2" fill="#293b32"/><circle cx="8" cy="-2" r="2" fill="#293b32"/><path d="M-7 7q7 8 14 0" stroke="#293b32" stroke-width="2" stroke-linecap="round"/><path d="M-31-4q-11-8-4-17M30-9q13-7 9-18" stroke="#293b32" stroke-width="2" stroke-linecap="round"/><path d="M-31 15q-10 4-9 14M30 15q11 2 12 12" stroke="#293b32" stroke-width="2" stroke-linecap="round"/></g><path d="M18 42q-9-8-13 3t9 11M190 167q14-11 19 3t-10 12" stroke="#293b32" stroke-width="1.7" stroke-linecap="round"/><path d="m23 91 4 8 8 1-6 5 1 8-7-4-7 4 2-8-6-5 8-1Z" fill="#f5e5a9" stroke="#293b32" stroke-width="1.5"/></svg>
+  </div>
+  <aside class="tip-card">
+    <svg class="tip-sun" viewBox="0 0 70 70" fill="none" stroke="#293b32" stroke-width="1.6"><circle cx="35" cy="35" r="13" fill="#f5e5a9"/><path d="M35 5v10M35 55v10M5 35h10M55 35h10M14 14l7 7M49 49l7 7M56 14l-7 7M21 49l-7 7"/><path d="M30 34h.1M40 34h.1M31 40q4 4 8 0" stroke-linecap="round"/></svg>
+    <div><div class="eyebrow">Today's tiny tip <span>✦</span></div><h2 id="tipTitle">Care starts with consistency.</h2><p id="tipText">Small, steady habits can support your overall wellbeing. You don't need a perfect routine — just one that works for you.</p></div>
+    <div class="tip-footer"><span id="tipCount">TIP 01 / 07</span><button onclick="nextTip()" style="border:0;background:none;color:var(--ink);font-weight:700">Next tip ↗</button></div>
+  </aside>
+</section>
+
+<div class="section-head"><div><h2>Your daily rhythm</h2><p>Check in gently — progress, not perfection.</p></div><p id="habitCount">0 of 5 completed</p></div>
+<section class="grid" id="routine">
+  <div class="panel">
+    <div class="panel-title"><h3>Little things checklist</h3><span class="small-tag">DAILY RITUAL ✿</span></div>
+    <div class="habit-list" id="habitList"></div>
+    <div class="progress-wrap"><div class="progress-label"><strong>Today's care score</strong><span id="progressText">0%</span></div><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title"><h3>Your month, in moments</h3><span style="font-size:22px">✷</span></div>
+    <div class="stats">
+      <div class="stat"><svg viewBox="0 0 36 36" fill="none" stroke="#293b32" stroke-width="1.6"><path d="M18 30V10M18 20C7 20 5 11 7 6c10 0 13 6 11 14ZM18 24c10 0 14-7 12-13-9 0-13 5-12 13Z"/></svg><div class="label">Check-in streak</div><div class="num" id="streakStat">0 days</div><div class="tiny">showing up counts</div></div>
+      <div class="stat"><svg viewBox="0 0 36 36" fill="none" stroke="#293b32" stroke-width="1.6"><circle cx="18" cy="18" r="12"/><path d="M18 9v9l6 4"/></svg><div class="label">Logged days</div><div class="num" id="loggedStat">0</div><div class="tiny">your journal entries</div></div>
+      <div class="stat"><svg viewBox="0 0 36 36" fill="none" stroke="#293b32" stroke-width="1.6"><path d="M18 30S5 22 7 13c2-7 10-6 11 0 2-6 10-7 12 0 2 9-12 17-12 17Z"/></svg><div class="label">Care habits done</div><div class="num" id="doneStat">0</div><div class="tiny">all-time checkmarks</div></div>
+      <div class="stat"><svg viewBox="0 0 36 36" fill="none" stroke="#293b32" stroke-width="1.6"><path d="M18 4c-4 7-10 12-10 19a10 10 0 0 0 20 0c0-7-6-12-10-19Z"/><path d="M13 24q1 5 6 5"/></svg><div class="label">Lifestyle note</div><div class="num" id="sleepStat">—</div><div class="tiny">last sleep log</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="section-head"><div><h2>Today's journal</h2><p>Notice patterns without judging yourself.</p></div><p>YOUR PRIVATE NOTES ✎</p></div>
+<section class="grid">
+  <div class="panel">
+    <div class="panel-title"><h3>How are you doing?</h3><span style="font-size:21px">☁</span></div>
+    <form id="journalForm">
+      <div class="form-grid">
+        <div class="field"><label for="sleep">Sleep last night</label><select id="sleep"><option value="">Choose hours</option><option value="Under 5h">Under 5 hours</option><option value="5–6h">5–6 hours</option><option value="7–8h">7–8 hours</option><option value="9h+">9+ hours</option></select></div>
+        <div class="field"><label for="water">Water today</label><select id="water"><option value="">Choose amount</option><option value="1–3 glasses">1–3 glasses</option><option value="4–6 glasses">4–6 glasses</option><option value="7–8 glasses">7–8 glasses</option><option value="9+ glasses">9+ glasses</option></select></div>
+        <div class="field"><label for="stress">Stress level</label><select id="stress"><option value="">Choose level</option><option value="Low">Low 🌱</option><option value="Medium">Medium 🌥</option><option value="High">High 🌧</option></select></div>
+        <div class="field"><label for="shedding">Hair shedding noticed</label><select id="shedding"><option value="">Choose observation</option><option value="Less than usual">Less than usual</option><option value="About usual">About usual</option><option value="More than usual">More than usual</option><option value="Not sure">Not sure</option></select></div>
+        <div class="field full"><label for="notes">Anything you noticed? (optional)</label><textarea id="notes" placeholder="New products, busy days, how your scalp feels…"></textarea></div>
+      </div>
+      <div class="save-row"><span class="mini-note">Your entries stay in this browser on this device.</span><button class="primary" type="submit">Save check-in ✓</button></div>
+    </form>
+  </div>
+  <div class="panel">
+    <div class="panel-title"><h3>Recent check-ins</h3><button onclick="exportData()" style="border:0;background:none;color:var(--muted);font-size:11px;text-decoration:underline">Export data</button></div>
+    <div id="historyList" class="history"></div>
+  </div>
+</section>
+<footer class="footer"><div><strong>strand</strong> — made for gentle, curious self-care.<br>Not a diagnosis or a promise of regrowth. ✿</div><svg class="footer-doodle" viewBox="0 0 90 50" fill="none" stroke="#293b32" stroke-width="1.5"><path d="M5 40Q40 45 85 8"/><path d="M20 39Q7 20 23 15q13 12-3 24ZM40 34Q34 14 51 9q11 14-11 25ZM58 25Q61 7 76 7q4 16-18 18Z" fill="#dce8d7"/><path d="M8 10q5-8 10 0t10 0M64 42l4-7 4 7 7 2-7 3-2 3-3-4Z" fill="#f5e5a9"/></svg></footer>
+</div>
+<div class="toast" id="toast">Saved with care ✿</div>
+<script>
+const habits=[
+ {id:'water',emoji:'💧',title:'Drink water regularly',desc:'Keep a bottle nearby and sip through the day.'},
+ {id:'protein',emoji:'🥜',title:'Eat a balanced meal',desc:'Include nourishing foods and a protein source.'},
+ {id:'scalp',emoji:'🌿',title:'Be gentle with your hair',desc:'Avoid rough brushing and tight hairstyles.'},
+ {id:'movement',emoji:'☀️',title:'Take a little movement break',desc:'A walk or stretch can help you reset.'},
+ {id:'winddown',emoji:'🌙',title:'Make room for rest',desc:'Try a calm wind-down before bedtime.'}
+];
+const tips=[
+ ['Care starts with consistency.','Small, steady habits can support your overall wellbeing. You don’t need a perfect routine — just one that works for you.'],
+ ['Be kind to your scalp.','Use a gentle approach when washing and detangling. Avoid pulling or hairstyles that feel tight or sore.'],
+ ['Food is part of the picture.','A varied diet with enough energy, protein, iron and other nutrients supports general health. Supplements aren’t always needed.'],
+ ['Rest is productive, too.','Try a regular sleep schedule where possible. Stress and sleep can affect wellbeing, so make room for small pauses.'],
+ ['Notice patterns, not single days.','Shedding can naturally vary. A simple journal may help you describe changes over time without counting every strand.'],
+ ['Keep product experiments simple.','Introducing one new hair product at a time makes it easier to notice irritation or changes. Stop using anything that causes a reaction.'],
+ ['Ask for help when you need it.','Sudden, patchy, persistent or worrying hair loss deserves a conversation with a qualified healthcare professional. You don’t have to figure it out alone.']
+];
+const key='strandWellness_v1';
+let data=JSON.parse(localStorage.getItem(key)||'{"days":{},"tip":0}');
+const todayKey=()=>new Date().toLocaleDateString('en-CA');
+function todayData(){return data.days[todayKey()]||(data.days[todayKey()]={habits:{},journal:{}})}
+function save(){localStorage.setItem(key,JSON.stringify(data))}
+function renderHabits(){
+ const d=todayData();const list=document.getElementById('habitList');
+ list.innerHTML=habits.map(h=>`<button class="habit ${d.habits[h.id]?'done':''}" data-habit="${h.id}" aria-pressed="${!!d.habits[h.id]}" style="text-align:left"><span class="habit-check">${d.habits[h.id]?'✓':''}</span><span class="habit-copy"><strong>${h.title}</strong><span>${h.desc}</span></span><span class="habit-emoji">${h.emoji}</span></button>`).join('');
+ list.querySelectorAll('[data-habit]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.habit;const day=todayData();day.habits[id]=!day.habits[id];save();renderAll()}));
+ const count=habits.filter(h=>d.habits[h.id]).length, pct=Math.round(count/habits.length*100);
+ document.getElementById('habitCount').textContent=`${count} of ${habits.length} completed`;
+ document.getElementById('progressText').textContent=pct+'%';
+ document.getElementById('progressFill').style.width=pct+'%';
+}
+function renderStats(){
+ const days=Object.entries(data.days).sort(([a],[b])=>b.localeCompare(a));
+ document.getElementById('loggedStat').textContent=days.filter(([,d])=>Object.keys(d.journal||{}).length||Object.values(d.habits||{}).some(Boolean)).length;
+ document.getElementById('doneStat').textContent=days.reduce((sum,[,d])=>sum+habits.filter(h=>d.habits?.[h.id]).length,0);
+ let streak=0;const date=new Date();for(let i=0;i<366;i++){const k=new Date(date);k.setDate(date.getDate()-i);const keyDate=k.toLocaleDateString('en-CA');const entry=data.days[keyDate];if(entry&&(Object.values(entry.habits||{}).some(Boolean)||Object.keys(entry.journal||{}).length)){streak++;}else if(i>0)break;}
+ document.getElementById('streakStat').textContent=streak+' day'+(streak===1?'':'s');
+ const latest=days.find(([,d])=>d.journal?.sleep);document.getElementById('sleepStat').textContent=latest?.[1].journal.sleep||'—';
+}
+function renderHistory(){
+ const list=document.getElementById('historyList');const entries=Object.entries(data.days).filter(([,d])=>Object.keys(d.journal||{}).length||Object.values(d.habits||{}).some(Boolean)).sort(([a],[b])=>b.localeCompare(a)).slice(0,5);
+ if(!entries.length){list.innerHTML='<div class="empty">Your first check-in will appear here. Tiny steps count 🌱</div>';return}
+ list.innerHTML=entries.map(([date,d])=>{const dt=new Date(date+'T12:00:00');const label=dt.toLocaleDateString(undefined,{month:'short',day:'numeric'});const j=d.journal||{};const summary=j.shedding?`Shedding: ${j.shedding}`:(Object.values(d.habits||{}).filter(Boolean).length+' habits checked');return `<div class="history-item"><div class="history-date">${label}</div><div class="history-main"><strong>${summary}</strong><span>${j.sleep?'Sleep: '+j.sleep:'Keep noticing gently'}</span></div><span class="shed-badge">${Object.values(d.habits||{}).filter(Boolean).length}/${habits.length} ✓</span></div>`}).join('');
+}
+function renderTip(){const i=data.tip%tips.length;document.getElementById('tipTitle').textContent=tips[i][0];document.getElementById('tipText').textContent=tips[i][1];document.getElementById('tipCount').textContent=`TIP ${String(i+1).padStart(2,'0')} / ${String(tips.length).padStart(2,'0')}`}
+function nextTip(){data.tip=(data.tip+1)%tips.length;save();renderTip()}
+function renderAll(){renderHabits();renderStats();renderHistory()}
+function showToast(text){const t=document.getElementById('toast');t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+document.getElementById('journalForm').addEventListener('submit',e=>{
+ e.preventDefault();const d=todayData();d.journal={};
+ ['sleep','water','stress','shedding','notes'].forEach(id=>{const v=document.getElementById(id).value.trim();if(v)d.journal[id]=v});
+ d.savedAt=new Date().toISOString();save();renderAll();showToast('Check-in saved with care ✿');
+});
+function loadTodayForm(){const j=todayData().journal||{};['sleep','water','stress','shedding','notes'].forEach(id=>{document.getElementById(id).value=j[id]||''})}
+function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='strand-hair-wellness-journal.json';a.click();URL.revokeObjectURL(a.href);showToast('Your journal export is ready ✿')}
+document.getElementById('todayDate').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+renderTip();renderAll();loadTodayForm();
+</script>
+</body>
+</html>'''
+
+readme = """# strand — Hair Wellness Journal
+
+A small, doodle-inspired hair wellness tracker made with HTML, CSS, and vanilla JavaScript.
+
+## Features
+- Daily lifestyle and hair-care checklist
+- Daily tips you can cycle through
+- Sleep, water, stress, shedding observations, and notes
+- Progress stats and recent check-in history
+- Saves entries in the browser using `localStorage`
+- Export your journal as a JSON file
+- Responsive layout for phones and computers
+
+## Run locally
+Open `index.html` in a browser.
+
+## Publish with GitHub Pages
+1. Create a new GitHub repository.
+2. Upload `index.html` and `README.md` to the repository root.
+3. Open **Settings → Pages**.
+4. Under **Build and deployment**, choose **Deploy from a branch**.
+5. Select the `main` branch and `/ (root)`, then save.
+6. Wait for the Pages link to appear.
+
+## Important
+This is a personal tracking tool, not a medical diagnostic tool. Hair shedding can have many causes. If hair loss is sudden, patchy, persistent, or worrying, speak with a qualified healthcare professional. The app stores information only in the current browser on the current device; it does not sync between devices.
+"""
+(base/'index.html').write_text(html, encoding='utf-8')
+(base/'README.md').write_text(readme, encoding='utf-8')
+zip_path=Path('/mnt/data/strand-hair-wellness-app.zip')
+with zipfile.ZipFile(zip_path,'w',zipfile.ZIP_DEFLATED) as z:
+    z.write(base/'index.html','strand/index.html')
+    z.write(base/'README.md','strand/README.md')
+print("Created:", base/'index.html', zip_path)
